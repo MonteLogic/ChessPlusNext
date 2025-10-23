@@ -1,0 +1,16 @@
+{
+  "name": "your-gh-submodule-gh-repo",
+  "version": "1.0.0",
+  "description": "Placeholder for your GitHub submodule repository",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'Build script placeholder'",
+    "dev": "echo 'Dev script placeholder'",
+    "test": "echo 'Test script placeholder'"
+  },
+  "keywords": ["placeholder", "submodule", "blog", "content"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
+}

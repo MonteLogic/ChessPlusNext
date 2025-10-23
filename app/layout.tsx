@@ -1,5 +1,6 @@
 import '#/styles/globals.css';
 import { AddressBar } from '#/ui/address-bar';
+import AddressBarLite from '#/ui/address-bar-lite';
 import Byline from '#/ui/byline';
 import { GlobalNav } from '#/ui/global-nav';
 import { Metadata } from 'next';
@@ -8,6 +9,7 @@ import { auth } from '@clerk/nextjs/server';
 import { cache } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import titles from '#/titles.json';
+import { getAppUrl, isClerkEnabled } from '#/utils/context/env';
 
 export const metadata: Metadata = {
   title: {
@@ -26,11 +28,21 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
   },
+  manifest: '/manifest.json',
+  metadataBase: new URL(getAppUrl()),
 };
 
 const getUserData = cache(async () => {
-  const { userId: clerkUserId } = auth();
+  if (!isClerkEnabled()) {
+    return {
+      title: 'No user logged in',
+      description: 'This description comes from the server',
+      userID: '',
+      dbUserId: null,
+    };
+  }
 
+  const { userId: clerkUserId } = auth();
   if (!clerkUserId) {
     return {
       title: 'No user logged in',
@@ -39,6 +51,12 @@ const getUserData = cache(async () => {
       dbUserId: null,
     };
   }
+  return {
+    title: 'User logged in',
+    description: 'This description comes from the server',
+    userID: clerkUserId,
+    dbUserId: null,
+  };
 });
 
 export default async function RootLayout({
@@ -47,30 +65,32 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const userData = await getUserData();
+  const clerkEnabled = isClerkEnabled();
 
-  return (
-    <ClerkProvider>
-      <html lang="en" className="[color-scheme:dark] dark">
-        <body className="bg-gray-1100 overflow-y-scroll bg-[url('/grid.svg')] pb-36">
-          <GlobalNav userData={userData} />
-          <div className="lg:pl-72">
-            <div className="mx-auto max-w-4xl space-y-8 px-2 pt-20 lg:px-8 lg:py-8">
-              <div className="bg-vc-border-gradient rounded-lg p-px shadow-lg shadow-black/20">
-                <div className="rounded-lg bg-black">
-                  <AddressBar />
-                </div>
+  const AppShell = (
+    <html lang="en" className="[color-scheme:dark] dark">
+      <body className="bg-gray-1100 overflow-y-scroll bg-[url('/grid.svg')] pb-36">
+        <GlobalNav userData={userData} />
+        <div className="lg:pl-72">
+          <div className="mx-auto max-w-4xl space-y-8 px-2 pt-20 lg:px-8 lg:py-8">
+            <div className="bg-vc-border-gradient rounded-lg p-px shadow-lg shadow-black/20">
+              <div className="rounded-lg bg-black">
+                {clerkEnabled ? <AddressBar /> : <AddressBarLite />}
               </div>
-              <div className="bg-vc-border-gradient rounded-lg p-px shadow-lg shadow-black/20">
-                <div className="rounded-lg bg-black p-3.5 lg:p-6">
-                  {children}
-                  <Analytics />
-                </div>
-              </div>
-              <Byline className="fixed sm:hidden" />
             </div>
+            <div className="bg-vc-border-gradient rounded-lg p-px shadow-lg shadow-black/20">
+              <div className="rounded-lg bg-black p-3.5 lg:p-6">
+                {children}
+                <Analytics />
+              </div>
+            </div>
+            <Byline className="fixed sm:hidden" />
           </div>
-        </body>
-      </html>
-    </ClerkProvider>
+        </div>
+      </body>
+    </html>
   );
+
+  // Wrap with ClerkProvider only when real keys are present
+  return clerkEnabled ? <ClerkProvider>{AppShell}</ClerkProvider> : AppShell;
 }

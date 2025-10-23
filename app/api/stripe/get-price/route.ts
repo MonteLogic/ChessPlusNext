@@ -6,9 +6,11 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+// Check if Stripe key is available
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeKey ? new Stripe(stripeKey, {
   apiVersion: '2024-12-18.acacia',
-});
+}) : null;
 
 /**
  * Fetches the price for a given Stripe product
@@ -17,6 +19,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  */
 export async function GET(request: Request): Promise<NextResponse> {
   try {
+    // Check if Stripe is configured
+    if (!stripe) {
+      return NextResponse.json(
+        { error: 'Stripe is not configured. Please set STRIPE_SECRET_KEY in your environment variables.' },
+        { status: 503 },
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get('productId');
 

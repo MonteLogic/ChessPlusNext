@@ -5,8 +5,10 @@ import { UserButton } from '@clerk/nextjs';
 import { checkUserRole } from '#/utils/UserUtils';
 import TaskBar from './task-bar';
 import Link from 'next/link';
+import { isClerkEnabled } from '#/utils/context/env';
 
 export function AddressBar({ subscriptionData }: { subscriptionData?: any }) {
+  const clerkEnabled = isClerkEnabled();
   const { session, isLoaded } = useSession();
   const userRole = session ? checkUserRole(session) : null;
   
@@ -26,7 +28,7 @@ export function AddressBar({ subscriptionData }: { subscriptionData?: any }) {
   }
   
   // Only show sign-in button when we're sure user is not logged in
-  if (!session) {
+  if (!clerkEnabled || !session) {
     return (
       <div className="flex items-center p-3.5 lg:px-5 lg:py-3">
         <Link 

@@ -25,9 +25,6 @@ export const TabGroup = ({
           path={path}
           parallelRoutesKey={parallelRoutesKey}
           isActive={false}
-          onClick={function (): void {
-            throw new Error('Function not implemented.');
-          }}
         />
       ))}
     </div>

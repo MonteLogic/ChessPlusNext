@@ -2,8 +2,8 @@
   "private": true,
   "packageManager": "pnpm@9.x",
   "scripts": {
-    "setup": "git submodule update --init --recursive && cd MoL-blog-content && pnpm i",
-    "postinstall": "cd MoL-blog-content && pnpm install",
+    "setup": "echo 'Setup complete - replace your-gh-submodule-gh-repo with your actual submodule'",
+    "postinstall": "echo 'Postinstall complete - replace your-gh-submodule-gh-repo with your actual submodule'",
     "build": "pnpm run generate-markdown-paths && next build",
     "dev": "next dev",
     "lint": "next lint",
@@ -16,7 +16,8 @@
     "test:db": "tsx tests/sqlite-test/setup-test-db.ts",
     "test:playwright": " exec playwright test",
     "local-db-create": "node tests/db-create/index.ts",
-      "generate-markdown-paths": "ts-node -O '{\"module\": \"CommonJS\"}' scripts/generate.ts"
+    "generate-markdown-paths": "ts-node -O '{\"module\": \"CommonJS\"}' scripts/generate.ts",
+    "brand": "tsx scripts/brand.ts"
   },
   "git": {
     "pre-commit": "lint-staged"
@@ -78,6 +79,7 @@
     "ms": "3.0.0-canary.1",
     "next": "14.0.3-canary.7",
     "next-mdx-remote": "5.0.0",
+    "next-pwa": "5.6.0",
     "pdf-lib": "^1.17.1",
     "postcss": "8.4.20",
     "prettier": "2.8.1",

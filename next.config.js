@@ -1,5 +1,10 @@
 const path = require('path');
 const webpack = require('webpack');
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -51,4 +56,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withPWA(nextConfig);

@@ -14,17 +14,14 @@ export const Tab = ({
   parallelRoutesKey?: string;
   item: Item;
   isActive: boolean;
-  onClick: () => void;
+  onClick?: () => void;
 }) => {
   const href = item.slug ? path + '/' + item.slug : path;
 
   return (
     <Link
       href={href}
-      onClick={(e) => {
-        e.preventDefault();
-        onClick();
-      }}
+      onClick={onClick ? (e) => { e.preventDefault(); onClick(); } : undefined}
       className={clsx('rounded-lg px-3 py-1 text-sm font-medium', {
         'bg-gray-700 text-gray-100 hover:bg-gray-500 hover:text-white':
           !isActive,
