@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { ChessPiece } from './pieces/ChessPiece';
 
 interface ChessBoardProps {
   board: any[][];
@@ -9,17 +10,12 @@ interface ChessBoardProps {
   isLoading: boolean;
 }
 
-const pieceSymbols: { [key: string]: string } = {
-  'wK': '♔', 'wQ': '♕', 'wR': '♖', 'wB': '♗', 'wN': '♘', 'wP': '♙',
-  'bK': '♚', 'bQ': '♛', 'bR': '♜', 'bB': '♝', 'bN': '♞', 'bP': '♟'
-};
-
 export function ChessBoard({ board, onMove, gameStatus, isLoading }: ChessBoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<string[]>([]);
 
   const getSquareColor = (row: number, col: number) => {
-    return (row + col) % 2 === 0 ? 'bg-amber-100' : 'bg-amber-800';
+    return (row + col) % 2 === 0 ? 'bg-stone-100' : 'bg-stone-600';
   };
 
   const getSquareId = (row: number, col: number) => {
@@ -66,7 +62,7 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading }: ChessBoardP
 
   return (
     <div className="w-full max-w-lg mx-auto">
-      <div className="grid grid-cols-8 gap-0 border-2 border-gray-600 rounded-lg overflow-hidden">
+      <div className="grid grid-cols-8 gap-0 border-4 border-stone-800 rounded-xl overflow-hidden shadow-2xl">
         {board.map((row, rowIndex) =>
           row.map((piece, colIndex) => {
             const squareId = getSquareId(rowIndex, colIndex);
@@ -77,17 +73,29 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading }: ChessBoardP
               <button
                 key={squareId}
                 className={`
-                  w-full aspect-square flex items-center justify-center text-4xl font-bold
+                  w-full aspect-square flex items-center justify-center relative
                   ${getSquareColor(rowIndex, colIndex)}
-                  ${isSelected ? 'ring-4 ring-blue-500' : ''}
-                  ${isPossibleMove ? 'ring-2 ring-green-500' : ''}
-                  hover:opacity-80 transition-opacity
+                  ${isSelected ? 'ring-4 ring-blue-400 ring-opacity-80' : ''}
+                  ${isPossibleMove ? 'ring-2 ring-green-400 ring-opacity-60' : ''}
+                  hover:brightness-110 transition-all duration-200
                   ${isLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+                  ${isSelected ? 'shadow-inner' : ''}
                 `}
                 onClick={() => handleSquareClick(rowIndex, colIndex)}
                 disabled={isLoading}
               >
-                {piece ? pieceSymbols[`${piece.color}${piece.type.toUpperCase()}`] : ''}
+                {piece && (
+                  <ChessPiece 
+                    piece={`${piece.color}${piece.type.toUpperCase()}`} 
+                    size={48}
+                    className="drop-shadow-md"
+                  />
+                )}
+                {isPossibleMove && !piece && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-3 h-3 bg-green-400 rounded-full opacity-60"></div>
+                  </div>
+                )}
               </button>
             );
           })
