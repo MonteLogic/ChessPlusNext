@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { StockfishEngine } from './StockfishEngine';
 
@@ -17,6 +18,11 @@ export function useStockfish(): StockfishHook {
   const [error, setError] = useState<string | null>(null);
   const [stockfish, setStockfish] = useState<StockfishEngine | null>(null);
 
+  // Ref to hold the resolve function for the pending getBestMove promise
+  const bestMoveResolver = useRef<((move: string | null) => void) | null>(null);
+  // Ref to manage the timeout
+  const moveTimeout = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     let mounted = true;
     let engine: StockfishEngine | null = null;
@@ -26,22 +32,42 @@ export function useStockfish(): StockfishHook {
         if (!mounted) return;
 
         engine = new StockfishEngine();
-        
-        // Set up message handler
+        setStockfish(engine); // Set engine instance immediately
+
+        // Set up a SINGLE, persistent message handler
         engine.setOnMessage((data: string) => {
-          if (data === 'readyok' && mounted) {
-            setStockfish(engine);
+          if (!mounted) return;
+
+          if (data === 'readyok') {
             setIsReady(true);
             setError(null);
           } else if (data.startsWith('error:')) {
             console.error('Stockfish error:', data);
-            if (mounted) {
-              setIsReady(false);
-              setError(data.replace('error: ', ''));
+            setIsReady(false);
+            setError(data.replace('error: ', ''));
+
+            // If an error occurs during move calculation, resolve the promise with null
+            if (bestMoveResolver.current) {
+              if (moveTimeout.current) clearTimeout(moveTimeout.current);
+              setIsLoading(false);
+              bestMoveResolver.current(null);
+              bestMoveResolver.current = null;
+            }
+          } else if (data.startsWith('bestmove')) {
+            // A "bestmove" message arrived
+            if (moveTimeout.current) clearTimeout(moveTimeout.current);
+            setIsLoading(false);
+
+            const move = data.split(' ')[1];
+            const bestMove = (move && move !== '(none)') ? move : null;
+
+            // Resolve the promise that is waiting for this move
+            if (bestMoveResolver.current) {
+              bestMoveResolver.current(bestMove);
+              bestMoveResolver.current = null; // Clear the resolver
             }
           }
         });
-        
       } catch (error) {
         console.error('Failed to initialize Stockfish:', error);
         if (mounted) {
@@ -51,7 +77,6 @@ export function useStockfish(): StockfishHook {
       }
     };
 
-    // Initialize immediately since we're using a custom implementation
     initStockfish();
 
     return () => {
@@ -59,8 +84,16 @@ export function useStockfish(): StockfishHook {
       if (engine) {
         engine.terminate();
       }
+      // Clear any pending promise on unmount
+      if (bestMoveResolver.current) {
+        bestMoveResolver.current(null);
+        bestMoveResolver.current = null;
+      }
+      if (moveTimeout.current) {
+        clearTimeout(moveTimeout.current);
+      }
     };
-  }, []);
+  }, []); // Empty dependency array, runs once
 
   const getBestMove = useCallback(async (game: Chess): Promise<string | null> => {
     if (!stockfish || !isReady) {
@@ -68,41 +101,40 @@ export function useStockfish(): StockfishHook {
       return null;
     }
 
+    // Prevent multiple concurrent move requests
+    if (isLoading || bestMoveResolver.current) {
+      console.warn('getBestMove called while already processing a move.');
+      return null;
+    }
+
     setIsLoading(true);
 
     return new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        setIsLoading(false);
-        resolve(null);
-      }, 3000); // 3 second timeout
+      // Store the resolve function so the 'onMessage' handler can call it
+      bestMoveResolver.current = resolve;
 
-      const originalOnMessage = stockfish.onMessage;
-      stockfish.setOnMessage((data: string) => {
-        if (data.startsWith('bestmove')) {
-          clearTimeout(timeout);
-          setIsLoading(false);
-          
-          const move = data.split(' ')[1];
-          if (move && move !== '(none)') {
-            resolve(move);
-          } else {
-            resolve(null);
-          }
+      // Set a timeout
+      moveTimeout.current = setTimeout(() => {
+        if (moveTimeout.current) {
+          clearTimeout(moveTimeout.current);
+          moveTimeout.current = null;
         }
         
-        if (originalOnMessage) {
-          originalOnMessage(data);
+        // If it times out, stop the calculation and resolve with null
+        stockfish.postMessage('stop'); // Tell engine to stop thinking
+        setIsLoading(false);
+        if (bestMoveResolver.current) {
+          bestMoveResolver.current(null);
+          bestMoveResolver.current = null;
         }
-      });
+      }, 3000); // 3 second timeout
 
-      // Set up the position
+      // Send the position and command to Stockfish
       const fen = game.fen();
       stockfish.postMessage(`position fen ${fen}`);
-      
-      // Use time-based search for faster responses
       stockfish.postMessage('go movetime 1500'); // 1.5 seconds max
     });
-  }, [stockfish, isReady]);
+  }, [stockfish, isReady, isLoading]); // Add isLoading to dependency array
 
   return {
     isReady,
