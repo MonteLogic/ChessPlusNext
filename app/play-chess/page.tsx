@@ -114,6 +114,7 @@ export default function PlayChessPage() {
               onMove={makeMove}
               gameStatus={gameStatus}
               isLoading={isLoading || stockfishLoading}
+              game={game}
             />
           </div>
           
