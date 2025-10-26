@@ -11,3 +11,4 @@ export interface WorkTimeShiftType {
   createdAt: string;
   updatedAt: string;
 }
+
