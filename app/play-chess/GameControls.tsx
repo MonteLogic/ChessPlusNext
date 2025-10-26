@@ -8,6 +8,7 @@ interface GameControlsProps {
   isLoading: boolean;
   isStockfishReady: boolean;
   stockfishError: string | null;
+  thinkingTime: number | null;
 }
 
 export function GameControls({ 
@@ -17,7 +18,8 @@ export function GameControls({
   onUndo, 
   isLoading,
   isStockfishReady,
-  stockfishError
+  stockfishError,
+  thinkingTime
 }: GameControlsProps) {
   return (
     <div className="space-y-4">
@@ -49,6 +51,11 @@ export function GameControls({
           {stockfishError && (
             <div className="text-red-400 text-xs">
               {stockfishError}
+            </div>
+          )}
+          {thinkingTime !== null && thinkingTime > 0 && (
+            <div className={`${thinkingTime < 1000 ? 'text-green-400' : 'text-yellow-400'}`}>
+              ● Last move: {thinkingTime.toFixed(0)}ms {thinkingTime < 1000 && '✓'}
             </div>
           )}
           {gameStatus === 'playing' && (

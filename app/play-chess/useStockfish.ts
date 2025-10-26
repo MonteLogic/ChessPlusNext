@@ -9,6 +9,7 @@ interface StockfishHook {
   isReady: boolean;
   isLoading: boolean;
   error: string | null;
+  thinkingTime: number | null;
   getBestMove: (game: Chess) => Promise<string | null>;
 }
 
@@ -17,6 +18,7 @@ export function useStockfish(): StockfishHook {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stockfish, setStockfish] = useState<StockfishEngine | null>(null);
+  const [thinkingTime, setThinkingTime] = useState<number | null>(null);
 
   // Ref to hold the resolve function for the pending getBestMove promise
   const bestMoveResolver = useRef<((move: string | null) => void) | null>(null);
@@ -56,12 +58,11 @@ export function useStockfish(): StockfishHook {
           } else if (data.startsWith('bestmove')) {
             // A "bestmove" message arrived
             if (moveTimeout.current) clearTimeout(moveTimeout.current);
-            setIsLoading(false);
-
+            
             const move = data.split(' ')[1];
             const bestMove = (move && move !== '(none)') ? move : null;
 
-            // Resolve the promise that is waiting for this move
+            // Call the stored resolver (which will calculate and set thinking time)
             if (bestMoveResolver.current) {
               bestMoveResolver.current(bestMove);
               bestMoveResolver.current = null; // Clear the resolver
@@ -108,10 +109,17 @@ export function useStockfish(): StockfishHook {
     }
 
     setIsLoading(true);
+    const startTime = performance.now();
 
     return new Promise((resolve) => {
       // Store the resolve function so the 'onMessage' handler can call it
-      bestMoveResolver.current = resolve;
+      bestMoveResolver.current = (move: string | null) => {
+        const endTime = performance.now();
+        const elapsedTime = endTime - startTime;
+        setThinkingTime(elapsedTime);
+        setIsLoading(false);
+        resolve(move);
+      };
 
       // Set a timeout
       moveTimeout.current = setTimeout(() => {
@@ -122,17 +130,16 @@ export function useStockfish(): StockfishHook {
         
         // If it times out, stop the calculation and resolve with null
         stockfish.postMessage('stop'); // Tell engine to stop thinking
-        setIsLoading(false);
         if (bestMoveResolver.current) {
           bestMoveResolver.current(null);
           bestMoveResolver.current = null;
         }
-      }, 3000); // 3 second timeout
+      }, 1500); // 1.5 second timeout (reduced from 3s)
 
       // Send the position and command to Stockfish
       const fen = game.fen();
       stockfish.postMessage(`position fen ${fen}`);
-      stockfish.postMessage('go movetime 1500'); // 1.5 seconds max
+      stockfish.postMessage('go movetime 800'); // 800ms max - targeting sub-second response
     });
   }, [stockfish, isReady, isLoading]); // Add isLoading to dependency array
 
@@ -140,6 +147,7 @@ export function useStockfish(): StockfishHook {
     isReady,
     isLoading,
     error,
+    thinkingTime,
     getBestMove
   };
 }

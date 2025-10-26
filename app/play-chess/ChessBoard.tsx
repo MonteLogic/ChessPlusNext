@@ -10,9 +10,10 @@ interface ChessBoardProps {
   gameStatus: string;
   isLoading: boolean;
   game?: Chess;
+  thinkingTime?: number | null;
 }
 
-export function ChessBoard({ board, onMove, gameStatus, isLoading, game }: ChessBoardProps) {
+export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkingTime }: ChessBoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null); // CHANGED: Use Square type
   const [possibleMoves, setPossibleMoves] = useState<Square[]>([]); // CHANGED: Use Square type
 
@@ -120,7 +121,7 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game }: Chess
       </div>
       
       {/* Game Status Messages - Fixed height to prevent layout shift */}
-      <div className="mt-4 text-center px-4 h-8 flex items-center justify-center">
+      <div className="mt-4 text-center px-4 flex flex-col items-center gap-2 min-h-[64px]">
         {gameStatus !== 'playing' && (
           <div className="text-lg sm:text-xl font-bold">
             {gameStatus === 'white-wins' && '🎉 You Win!'}
@@ -131,6 +132,12 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game }: Chess
         
         {isLoading && (
           <div className="text-base sm:text-lg">🤖 Stockfish is thinking...</div>
+        )}
+        
+        {!isLoading && thinkingTime !== null && thinkingTime > 0 && gameStatus === 'playing' && (
+          <div className={`text-sm sm:text-base font-semibold ${thinkingTime < 1000 ? 'text-green-400' : 'text-yellow-400'}`}>
+            ⚡ Thinking time: {thinkingTime.toFixed(0)}ms {thinkingTime < 1000 && '✓'}
+          </div>
         )}
       </div>
     </div>

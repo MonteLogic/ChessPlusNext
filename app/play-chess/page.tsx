@@ -13,7 +13,7 @@ export default function PlayChessPage() {
   const [gameStatus, setGameStatus] = useState('playing');
   const [isLoading, setIsLoading] = useState(false);
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
-  const { isReady, isLoading: stockfishLoading, error: stockfishError, getBestMove } = useStockfish();
+  const { isReady, isLoading: stockfishLoading, error: stockfishError, thinkingTime, getBestMove } = useStockfish();
 
   const updateBoard = useCallback(() => {
     setBoard(game.board());
@@ -121,6 +121,7 @@ export default function PlayChessPage() {
               gameStatus={gameStatus}
               isLoading={isLoading || stockfishLoading}
               game={game}
+              thinkingTime={thinkingTime}
             />
           </div>
         </div>
@@ -136,6 +137,7 @@ export default function PlayChessPage() {
               isLoading={isLoading || stockfishLoading}
               isStockfishReady={isReady}
               stockfishError={stockfishError}
+              thinkingTime={thinkingTime}
             />
           </div>
         </div>
