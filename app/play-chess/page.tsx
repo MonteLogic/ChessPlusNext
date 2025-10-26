@@ -17,30 +17,21 @@ export default function PlayChessPage() {
   const [gameStarted, setGameStarted] = useState(true); // White can start immediately
   const { isReady, isLoading: stockfishLoading, error: stockfishError, thinkingTime, getBestMove } = useStockfish();
   
-  // Audio context for move sound
-  const audioContextRef = useRef<AudioContext | null>(null);
+  // Audio ref for chess piece move sound
+  const moveSoundRef = useRef<HTMLAudioElement | null>(null);
   
   const playMoveSound = useCallback(() => {
     try {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (!moveSoundRef.current) {
+        moveSoundRef.current = new Audio('/chess-sounds/placingChessPiece.wav');
+        moveSoundRef.current.volume = 0.5;
       }
       
-      const audioContext = audioContextRef.current;
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.value = 800; // Higher pitch
-      oscillator.type = 'sine';
-      
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.2);
+      // Reset to start and play
+      moveSoundRef.current.currentTime = 0;
+      moveSoundRef.current.play().catch(error => {
+        console.error('Failed to play move sound:', error);
+      });
     } catch (error) {
       console.error('Failed to play move sound:', error);
     }
