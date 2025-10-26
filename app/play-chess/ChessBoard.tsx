@@ -153,7 +153,7 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkin
           <div className="text-base sm:text-lg">🤖 Stockfish is thinking...</div>
         )}
         
-        {!isLoading && thinkingTime !== null && thinkingTime > 0 && gameStatus === 'playing' && gameStarted && (
+        {!isLoading && thinkingTime != null && thinkingTime > 0 && gameStatus === 'playing' && gameStarted && (
           <div className={`text-sm sm:text-base font-semibold ${thinkingTime < 1000 ? 'text-green-400' : 'text-yellow-400'}`}>
             ⚡ Thinking time: {thinkingTime.toFixed(0)}ms {thinkingTime < 1000 && '✓'}
           </div>
