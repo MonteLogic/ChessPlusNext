@@ -23,9 +23,9 @@ export const getSecondMenu = (
         description: 'My Profile page.',
       },
       {
-        name: 'Team Schedule',
-        slug: 'main/schedule',
-        description: 'Schedule page.',
+        name: 'Play Chess',
+        slug: 'play-chess',
+        description: 'Chess playing page.',
       },
       {
         name: 'Employees',
