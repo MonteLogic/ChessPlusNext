@@ -13,6 +13,8 @@ export default function PlayChessPage() {
   const [gameStatus, setGameStatus] = useState('playing');
   const [isLoading, setIsLoading] = useState(false);
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
+  const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w');
+  const [gameStarted, setGameStarted] = useState(true); // White can start immediately
   const { isReady, isLoading: stockfishLoading, error: stockfishError, thinkingTime, getBestMove } = useStockfish();
 
   const updateBoard = useCallback(() => {
@@ -31,15 +33,18 @@ export default function PlayChessPage() {
   }, [game]);
 
   const makeMove = useCallback(async (from: string, to: string) => {
-    if (gameStatus !== 'playing' || game.turn() !== 'w') return false;
+    // Only allow moves when it's the player's turn
+    // For Black player, also check that game has started (Stockfish has moved first)
+    if (gameStatus !== 'playing' || game.turn() !== playerColor) return false;
+    if (playerColor === 'b' && !gameStarted) return false;
     
     try {
       const move = game.move({ from, to, promotion: 'q' });
       if (move) {
         updateBoard();
         
-        // If game is still ongoing and it's black's turn, get Stockfish move
-        if (!game.isGameOver() && game.turn() === 'b' && isReady) {
+        // If game is still ongoing, get Stockfish move (opponent's turn)
+        if (!game.isGameOver() && isReady) {
           setIsLoading(true);
           try {
             const stockfishMove = await getBestMove(game);
@@ -62,15 +67,48 @@ export default function PlayChessPage() {
       console.error('Invalid move:', error);
     }
     return false;
-  }, [game, gameStatus, updateBoard, isReady, getBestMove]);
+  }, [game, gameStatus, updateBoard, isReady, getBestMove, playerColor, gameStarted]);
 
   const resetGame = useCallback(() => {
     const newGame = new Chess();
     setGame(newGame);
     setGameStatus('playing');
     setMoveHistory([]);
+    setGameStarted(false);
     updateBoard();
   }, [updateBoard]);
+
+  const handlePlayerColorChange = useCallback((color: 'w' | 'b') => {
+    setPlayerColor(color);
+    const newGame = new Chess();
+    setGame(newGame);
+    setGameStatus('playing');
+    setMoveHistory([]);
+    setGameStarted(color === 'w'); // White can start immediately, Black needs to press Start Game
+    updateBoard();
+  }, [updateBoard]);
+
+  const startGame = useCallback(async () => {
+    setGameStarted(true);
+    
+    // If playing as Black, Stockfish (White) should make the first move
+    if (playerColor === 'b' && isReady) {
+      setIsLoading(true);
+      try {
+        const stockfishMove = await getBestMove(game);
+        if (stockfishMove) {
+          const stockfishMoveObj = game.move(stockfishMove);
+          if (stockfishMoveObj) {
+            updateBoard();
+          }
+        }
+      } catch (error) {
+        console.error('Stockfish move failed:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  }, [playerColor, isReady, game, getBestMove, updateBoard]);
 
   const undoMove = useCallback(() => {
     if (moveHistory.length > 0) {
@@ -122,6 +160,8 @@ export default function PlayChessPage() {
               isLoading={isLoading || stockfishLoading}
               game={game}
               thinkingTime={thinkingTime}
+              playerColor={playerColor}
+              gameStarted={gameStarted}
             />
           </div>
         </div>
@@ -138,6 +178,10 @@ export default function PlayChessPage() {
               isStockfishReady={isReady}
               stockfishError={stockfishError}
               thinkingTime={thinkingTime}
+              playerColor={playerColor}
+              onPlayerColorChange={handlePlayerColorChange}
+              gameStarted={gameStarted}
+              onStartGame={startGame}
             />
           </div>
         </div>
