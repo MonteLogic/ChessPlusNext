@@ -18,6 +18,8 @@ interface ChessBoardProps {
 export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkingTime, playerColor = 'w', gameStarted = true }: ChessBoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null); // CHANGED: Use Square type
   const [possibleMoves, setPossibleMoves] = useState<Square[]>([]); // CHANGED: Use Square type
+  const [draggedSquare, setDraggedSquare] = useState<Square | null>(null);
+  const [dragOverSquare, setDragOverSquare] = useState<Square | null>(null);
 
   const getSquareColor = (row: number, col: number) => {
     // If playing as black, flip the board visually
@@ -76,6 +78,70 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkin
     }
   }, [selectedSquare, board, onMove, gameStatus, isLoading, calculatePossibleMoves, playerColor, gameStarted]);
 
+  const handleDragStart = useCallback((e: React.DragEvent, row: number, col: number) => {
+    if (gameStatus !== 'playing' || isLoading) {
+      e.preventDefault();
+      return;
+    }
+    
+    // For Black, game must be started first
+    if (playerColor === 'b' && !gameStarted) {
+      e.preventDefault();
+      return;
+    }
+    
+    const squareId = getSquareId(row, col);
+    const piece = board[row][col];
+    
+    // Only allow dragging player's own pieces
+    if (piece && piece.color === playerColor) {
+      setDraggedSquare(squareId);
+      setSelectedSquare(squareId);
+      setPossibleMoves(calculatePossibleMoves(squareId));
+      // Set drag data
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', squareId);
+    } else {
+      e.preventDefault();
+    }
+  }, [board, gameStatus, isLoading, playerColor, gameStarted, calculatePossibleMoves]);
+
+  const handleDragOver = useCallback((e: React.DragEvent, row: number, col: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const squareId = getSquareId(row, col);
+    
+    // Only highlight if it's a possible move
+    if (possibleMoves.includes(squareId)) {
+      setDragOverSquare(squareId);
+    }
+  }, [possibleMoves]);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverSquare(null);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedSquare(null);
+    setDragOverSquare(null);
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent, row: number, col: number) => {
+    e.preventDefault();
+    const toSquare = getSquareId(row, col);
+    
+    if (draggedSquare && possibleMoves.includes(toSquare)) {
+      const moveSuccess = await onMove(draggedSquare, toSquare);
+      if (moveSuccess) {
+        setSelectedSquare(null);
+        setPossibleMoves([]);
+      }
+    }
+    
+    setDraggedSquare(null);
+    setDragOverSquare(null);
+  }, [draggedSquare, possibleMoves, onMove]);
+
   const isHighlighted = (row: number, col: number) => {
     const squareId = getSquareId(row, col);
     // This comparison is now type-safe: (Square | null) === Square
@@ -95,6 +161,8 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkin
               const squareId = getSquareId(actualRowIndex, actualColIndex);
               const isSelected = selectedSquare === squareId;
               const isPossibleMove = possibleMoves.includes(squareId);
+              const isDragged = draggedSquare === squareId;
+              const isDragOver = dragOverSquare === squareId;
               
               return (
                 <button
@@ -104,12 +172,20 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkin
                     ${getSquareColor(visualRowIndex, visualColIndex)}
                     ${isSelected ? 'ring-4 ring-blue-400 ring-opacity-80' : ''}
                     ${isPossibleMove ? 'ring-2 ring-green-400 ring-opacity-60' : ''}
+                    ${isDragOver ? 'ring-4 ring-blue-500 ring-opacity-90 bg-blue-300' : ''}
+                    ${isDragged ? 'opacity-30' : ''}
                     hover:brightness-110 transition-all duration-200
                     ${!gameStarted && playerColor === 'b' ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
                     ${isSelected ? 'shadow-inner' : ''}
                     border-0 outline-none
                   `}
                   onClick={() => handleSquareClick(actualRowIndex, actualColIndex)}
+                  onDragStart={(e) => handleDragStart(e, actualRowIndex, actualColIndex)}
+                  onDragOver={(e) => handleDragOver(e, actualRowIndex, actualColIndex)}
+                  onDragLeave={handleDragLeave}
+                  onDragEnd={handleDragEnd}
+                  onDrop={(e) => handleDrop(e, actualRowIndex, actualColIndex)}
+                  draggable={piece && piece.color === playerColor && !isLoading && (gameStarted || playerColor === 'w')}
                   disabled={isLoading || (!gameStarted && playerColor === 'b')}
                 >
                   {piece && (

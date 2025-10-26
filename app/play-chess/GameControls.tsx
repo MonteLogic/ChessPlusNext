@@ -153,8 +153,8 @@ export function GameControls({
       <div className="border-t border-gray-600 pt-4">
         <h4 className="text-base sm:text-lg font-semibold mb-2">Instructions</h4>
         <div className="text-xs sm:text-sm text-gray-300 space-y-1">
-          <div>• Click your piece to select it</div>
-          <div>• Click a square to move</div>
+          <div>• Click or drag your piece to move</div>
+          <div>• Drop on highlighted squares</div>
           <div>• You play as {playerColor === 'w' ? 'White' : 'Black'}</div>
           <div>• Stockfish plays as {playerColor === 'w' ? 'Black' : 'White'}</div>
         </div>
