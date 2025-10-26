@@ -119,22 +119,20 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game }: Chess
         </div>
       </div>
       
-      {/* Game Status Messages */}
-      {gameStatus !== 'playing' && (
-        <div className="mt-4 text-center px-4">
+      {/* Game Status Messages - Fixed height to prevent layout shift */}
+      <div className="mt-4 text-center px-4 h-8 flex items-center justify-center">
+        {gameStatus !== 'playing' && (
           <div className="text-lg sm:text-xl font-bold">
             {gameStatus === 'white-wins' && '🎉 You Win!'}
             {gameStatus === 'black-wins' && '😞 Stockfish Wins!'}
             {gameStatus === 'draw' && '🤝 Draw!'}
           </div>
-        </div>
-      )}
-      
-      {isLoading && (
-        <div className="mt-4 text-center px-4">
+        )}
+        
+        {isLoading && (
           <div className="text-base sm:text-lg">🤖 Stockfish is thinking...</div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
