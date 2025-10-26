@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { ChessPiece } from './pieces/ChessPiece';
-import { Chess } from 'chess.js';
+import { Chess, type Square } from 'chess.js'; // CHANGED: Import the Square type
 
 interface ChessBoardProps {
   board: any[][];
@@ -13,34 +13,37 @@ interface ChessBoardProps {
 }
 
 export function ChessBoard({ board, onMove, gameStatus, isLoading, game }: ChessBoardProps) {
-  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
-  const [possibleMoves, setPossibleMoves] = useState<string[]>([]);
+  const [selectedSquare, setSelectedSquare] = useState<Square | null>(null); // CHANGED: Use Square type
+  const [possibleMoves, setPossibleMoves] = useState<Square[]>([]); // CHANGED: Use Square type
 
   const getSquareColor = (row: number, col: number) => {
     return (row + col) % 2 === 0 ? 'bg-stone-100' : 'bg-stone-600';
   };
 
-  const getSquareId = (row: number, col: number) => {
+  // CHANGED: Update function to return Square type
+  const getSquareId = (row: number, col: number): Square => {
     const file = String.fromCharCode(97 + col);
     const rank = 8 - row;
-    return `${file}${rank}`;
+    return `${file}${rank}` as Square; // Use type assertion
   };
 
-  const calculatePossibleMoves = useCallback((square: string) => {
+  // CHANGED: Update parameter to use Square type
+  const calculatePossibleMoves = useCallback((square: Square) => {
     if (!game) return [];
     
-    const moves = game.moves({ square, verbose: true });
-    return moves.map(move => move.to);
+    const moves = game.moves({ square, verbose: true }); // This line is now valid
+    return moves.map(move => move.to); // This line is now valid (move.to returns Square)
   }, [game]);
 
   const handleSquareClick = useCallback(async (row: number, col: number) => {
     if (gameStatus !== 'playing' || isLoading) return;
     
-    const squareId = getSquareId(row, col);
+    const squareId = getSquareId(row, col); // squareId is now type Square
     const piece = board[row][col];
     
     if (selectedSquare) {
       // Attempt to make a move
+      // onMove(string, string) accepts Square, as Square is a subset of string
       const moveSuccess = await onMove(selectedSquare, squareId);
       if (moveSuccess) {
         setSelectedSquare(null);
@@ -66,6 +69,7 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game }: Chess
 
   const isHighlighted = (row: number, col: number) => {
     const squareId = getSquareId(row, col);
+    // This comparison is now type-safe: (Square | null) === Square
     return selectedSquare === squareId || possibleMoves.includes(squareId);
   };
 
