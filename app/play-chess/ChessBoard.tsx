@@ -96,13 +96,13 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkin
               return (
                 <button
                   key={`${visualRowIndex}-${visualColIndex}`}
-                  className={`
+                    className={`
                     aspect-square flex items-center justify-center relative
                     ${getSquareColor(visualRowIndex, visualColIndex)}
                     ${isSelected ? 'ring-4 ring-blue-400 ring-opacity-80' : ''}
                     ${isPossibleMove ? 'ring-2 ring-green-400 ring-opacity-60' : ''}
                     hover:brightness-110 transition-all duration-200
-                    ${(isLoading || !gameStarted) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+                    ${!gameStarted ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
                     ${isSelected ? 'shadow-inner' : ''}
                     border-0 outline-none
                   `}
@@ -112,8 +112,8 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkin
                   {piece && (
                     <ChessPiece 
                       piece={`${piece.color}${piece.type.toUpperCase()}`} 
-                      size={48}
-                      className="drop-shadow-md w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12"
+                      size={60}
+                      className="drop-shadow-md w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14"
                     />
                   )}
                   {isPossibleMove && !piece && (

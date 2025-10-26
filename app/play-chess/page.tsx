@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { ChessBoard } from './ChessBoard';
 import { GameControls } from './GameControls';
@@ -16,6 +16,35 @@ export default function PlayChessPage() {
   const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w');
   const [gameStarted, setGameStarted] = useState(true); // White can start immediately
   const { isReady, isLoading: stockfishLoading, error: stockfishError, thinkingTime, getBestMove } = useStockfish();
+  
+  // Audio context for move sound
+  const audioContextRef = useRef<AudioContext | null>(null);
+  
+  const playMoveSound = useCallback(() => {
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      
+      const audioContext = audioContextRef.current;
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800; // Higher pitch
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.2);
+    } catch (error) {
+      console.error('Failed to play move sound:', error);
+    }
+  }, []);
 
   const updateBoard = useCallback(() => {
     setBoard(game.board());
@@ -52,6 +81,7 @@ export default function PlayChessPage() {
               const stockfishMoveObj = game.move(stockfishMove);
               if (stockfishMoveObj) {
                 updateBoard();
+                playMoveSound(); // Play sound when computer moves
               }
             }
           } catch (error) {
@@ -67,7 +97,7 @@ export default function PlayChessPage() {
       console.error('Invalid move:', error);
     }
     return false;
-  }, [game, gameStatus, updateBoard, isReady, getBestMove, playerColor, gameStarted]);
+  }, [game, gameStatus, updateBoard, isReady, getBestMove, playerColor, gameStarted, playMoveSound]);
 
   const resetGame = useCallback(() => {
     const newGame = new Chess();
@@ -100,6 +130,7 @@ export default function PlayChessPage() {
           const stockfishMoveObj = game.move(stockfishMove);
           if (stockfishMoveObj) {
             updateBoard();
+            playMoveSound(); // Play sound when computer makes first move
           }
         }
       } catch (error) {
@@ -108,7 +139,7 @@ export default function PlayChessPage() {
         setIsLoading(false);
       }
     }
-  }, [playerColor, isReady, game, getBestMove, updateBoard]);
+  }, [playerColor, isReady, game, getBestMove, updateBoard, playMoveSound]);
 
   const undoMove = useCallback(() => {
     if (moveHistory.length > 0) {
