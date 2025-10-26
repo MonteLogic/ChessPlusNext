@@ -1,4 +1,4 @@
-# MoMegaTemplate PWA
+# BrainRot Chess
 
 A comprehensive Next.js 14+ PWA starter template designed to kickstart your modern web applications with a powerful GitHub markdown-based blog system and enterprise-grade features.
 
