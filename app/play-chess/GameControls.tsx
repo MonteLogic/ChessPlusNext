@@ -9,6 +9,10 @@ interface GameControlsProps {
   isStockfishReady: boolean;
   stockfishError: string | null;
   thinkingTime: number | null;
+  playerColor?: 'w' | 'b';
+  onPlayerColorChange?: (color: 'w' | 'b') => void;
+  gameStarted?: boolean;
+  onStartGame?: () => void;
 }
 
 export function GameControls({ 
@@ -19,28 +23,44 @@ export function GameControls({
   isLoading,
   isStockfishReady,
   stockfishError,
-  thinkingTime
+  thinkingTime,
+  playerColor = 'w',
+  onPlayerColorChange,
+  gameStarted = true,
+  onStartGame
 }: GameControlsProps) {
   return (
     <div className="space-y-4">
       <h3 className="text-lg sm:text-xl font-bold">Game Controls</h3>
       
-      <div className="grid grid-cols-2 gap-2 xl:grid-cols-1 xl:space-y-2 xl:gap-0">
-        <button
-          onClick={onReset}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 sm:px-4 rounded transition-colors text-sm sm:text-base"
-        >
-          New Game
-        </button>
-        
-        <button
-          onClick={onUndo}
-          disabled={moveHistory.length === 0 || isLoading}
-          className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-bold py-2 px-3 sm:px-4 rounded transition-colors text-sm sm:text-base"
-        >
-          Undo Move
-        </button>
-      </div>
+      {gameStarted ? (
+        <div className="grid grid-cols-2 gap-2 xl:grid-cols-1 xl:space-y-2 xl:gap-0">
+          <button
+            onClick={onReset}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 sm:px-4 rounded transition-colors text-sm sm:text-base"
+          >
+            New Game
+          </button>
+          
+          <button
+            onClick={onUndo}
+            disabled={moveHistory.length === 0 || isLoading}
+            className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-bold py-2 px-3 sm:px-4 rounded transition-colors text-sm sm:text-base"
+          >
+            Undo Move
+          </button>
+        </div>
+      ) : (
+        onStartGame && (
+          <button
+            onClick={onStartGame}
+            disabled={isLoading || !isStockfishReady}
+            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-500 disabled:cursor-not-allowed text-white font-bold py-2 px-3 sm:px-4 rounded transition-colors text-sm sm:text-base"
+          >
+            Start Game
+          </button>
+        )
+      )}
 
       <div className="border-t border-gray-600 pt-4">
         <h4 className="text-base sm:text-lg font-semibold mb-2">Game Status</h4>
@@ -61,10 +81,16 @@ export function GameControls({
           {gameStatus === 'playing' && (
             <div className="text-green-400">● Game in progress</div>
           )}
-          {gameStatus === 'white-wins' && (
+          {gameStatus === 'white-wins' && playerColor === 'w' && (
             <div className="text-yellow-400">● You won!</div>
           )}
-          {gameStatus === 'black-wins' && (
+          {gameStatus === 'white-wins' && playerColor === 'b' && (
+            <div className="text-red-400">● Stockfish won</div>
+          )}
+          {gameStatus === 'black-wins' && playerColor === 'b' && (
+            <div className="text-yellow-400">● You won!</div>
+          )}
+          {gameStatus === 'black-wins' && playerColor === 'w' && (
             <div className="text-red-400">● Stockfish won</div>
           )}
           {gameStatus === 'draw' && (
@@ -90,13 +116,47 @@ export function GameControls({
         </div>
       )}
 
+      {onPlayerColorChange && (
+        <div className="border-t border-gray-600 pt-4">
+          <h4 className="text-base sm:text-lg font-semibold mb-2">Play As</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => onPlayerColorChange('w')}
+              disabled={isLoading}
+              className={`
+                py-2 px-3 sm:px-4 rounded transition-all font-bold text-sm sm:text-base
+                ${playerColor === 'w' 
+                  ? 'bg-blue-600 text-white ring-2 ring-blue-400' 
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}
+                ${isLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+              `}
+            >
+              White
+            </button>
+            <button
+              onClick={() => onPlayerColorChange('b')}
+              disabled={isLoading}
+              className={`
+                py-2 px-3 sm:px-4 rounded transition-all font-bold text-sm sm:text-base
+                ${playerColor === 'b' 
+                  ? 'bg-blue-600 text-white ring-2 ring-blue-400' 
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}
+                ${isLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+              `}
+            >
+              Black
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="border-t border-gray-600 pt-4">
         <h4 className="text-base sm:text-lg font-semibold mb-2">Instructions</h4>
         <div className="text-xs sm:text-sm text-gray-300 space-y-1">
-          <div>• Click a white piece to select it</div>
+          <div>• Click your piece to select it</div>
           <div>• Click a square to move</div>
-          <div>• You play as white</div>
-          <div>• Stockfish plays as black</div>
+          <div>• You play as {playerColor === 'w' ? 'White' : 'Black'}</div>
+          <div>• Stockfish plays as {playerColor === 'w' ? 'Black' : 'White'}</div>
         </div>
       </div>
     </div>

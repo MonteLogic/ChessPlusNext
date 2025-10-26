@@ -11,14 +11,19 @@ interface ChessBoardProps {
   isLoading: boolean;
   game?: Chess;
   thinkingTime?: number | null;
+  playerColor?: 'w' | 'b';
+  gameStarted?: boolean;
 }
 
-export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkingTime }: ChessBoardProps) {
+export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkingTime, playerColor = 'w', gameStarted = true }: ChessBoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null); // CHANGED: Use Square type
   const [possibleMoves, setPossibleMoves] = useState<Square[]>([]); // CHANGED: Use Square type
 
   const getSquareColor = (row: number, col: number) => {
-    return (row + col) % 2 === 0 ? 'bg-stone-100' : 'bg-stone-600';
+    // If playing as black, flip the board visually
+    const visualRow = playerColor === 'b' ? 7 - row : row;
+    const visualCol = playerColor === 'b' ? 7 - col : col;
+    return (visualRow + visualCol) % 2 === 0 ? 'bg-stone-100' : 'bg-stone-600';
   };
 
   // CHANGED: Update function to return Square type
@@ -39,6 +44,9 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkin
   const handleSquareClick = useCallback(async (row: number, col: number) => {
     if (gameStatus !== 'playing' || isLoading) return;
     
+    // For Black, game must be started first
+    if (playerColor === 'b' && !gameStarted) return;
+    
     const squareId = getSquareId(row, col); // squareId is now type Square
     const piece = board[row][col];
     
@@ -50,8 +58,8 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkin
         setSelectedSquare(null);
         setPossibleMoves([]);
       } else {
-        // If move failed, select new piece if it's a white piece
-        if (piece && piece.color === 'w') {
+        // If move failed, select new piece if it's a player's piece
+        if (piece && piece.color === playerColor) {
           setSelectedSquare(squareId);
           setPossibleMoves(calculatePossibleMoves(squareId));
         } else {
@@ -60,13 +68,13 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkin
         }
       }
     } else {
-      // Select piece if it's white
-      if (piece && piece.color === 'w') {
+      // Select piece if it's the player's color
+      if (piece && piece.color === playerColor) {
         setSelectedSquare(squareId);
         setPossibleMoves(calculatePossibleMoves(squareId));
       }
     }
-  }, [selectedSquare, board, onMove, gameStatus, isLoading, calculatePossibleMoves]);
+  }, [selectedSquare, board, onMove, gameStatus, isLoading, calculatePossibleMoves, playerColor, gameStarted]);
 
   const isHighlighted = (row: number, col: number) => {
     const squareId = getSquareId(row, col);
@@ -79,33 +87,36 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkin
       {/* Responsive Chess Board */}
       <div className="w-full max-w-md sm:max-w-lg lg:max-w-xl xl:max-w-2xl aspect-square">
         <div className="grid grid-cols-8 border-4 border-stone-800 rounded-xl overflow-hidden shadow-2xl h-full">
-          {board.map((row, rowIndex) =>
-            row.map((piece, colIndex) => {
-              const squareId = getSquareId(rowIndex, colIndex);
+          {(playerColor === 'b' ? [...board].reverse() : board).map((row, visualRowIndex) =>
+            (playerColor === 'b' ? [...row].reverse() : row).map((piece, visualColIndex) => {
+              // Map visual indices back to actual indices
+              const actualRowIndex = playerColor === 'b' ? 7 - visualRowIndex : visualRowIndex;
+              const actualColIndex = playerColor === 'b' ? 7 - visualColIndex : visualColIndex;
+              const squareId = getSquareId(actualRowIndex, actualColIndex);
               const isSelected = selectedSquare === squareId;
               const isPossibleMove = possibleMoves.includes(squareId);
               
               return (
                 <button
-                  key={`${rowIndex}-${colIndex}`}
-                  className={`
+                  key={`${visualRowIndex}-${visualColIndex}`}
+                    className={`
                     aspect-square flex items-center justify-center relative
-                    ${getSquareColor(rowIndex, colIndex)}
+                    ${getSquareColor(visualRowIndex, visualColIndex)}
                     ${isSelected ? 'ring-4 ring-blue-400 ring-opacity-80' : ''}
                     ${isPossibleMove ? 'ring-2 ring-green-400 ring-opacity-60' : ''}
                     hover:brightness-110 transition-all duration-200
-                    ${isLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+                    ${!gameStarted && playerColor === 'b' ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
                     ${isSelected ? 'shadow-inner' : ''}
                     border-0 outline-none
                   `}
-                  onClick={() => handleSquareClick(rowIndex, colIndex)}
-                  disabled={isLoading}
+                  onClick={() => handleSquareClick(actualRowIndex, actualColIndex)}
+                  disabled={isLoading || (!gameStarted && playerColor === 'b')}
                 >
                   {piece && (
                     <ChessPiece 
                       piece={`${piece.color}${piece.type.toUpperCase()}`} 
-                      size={48}
-                      className="drop-shadow-md w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12"
+                      size={60}
+                      className="drop-shadow-md w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14"
                     />
                   )}
                   {isPossibleMove && !piece && (
@@ -122,19 +133,27 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkin
       
       {/* Game Status Messages - Fixed height to prevent layout shift */}
       <div className="mt-4 text-center px-4 flex flex-col items-center gap-2 min-h-[64px]">
+        {!gameStarted && playerColor === 'b' && (
+          <div className="text-base sm:text-lg font-bold text-yellow-400">
+            ⏳ Waiting for you to start the game
+          </div>
+        )}
+        
         {gameStatus !== 'playing' && (
           <div className="text-lg sm:text-xl font-bold">
-            {gameStatus === 'white-wins' && '🎉 You Win!'}
-            {gameStatus === 'black-wins' && '😞 Stockfish Wins!'}
+            {gameStatus === 'white-wins' && playerColor === 'w' && '🎉 You Win!'}
+            {gameStatus === 'white-wins' && playerColor === 'b' && '😞 Stockfish Wins!'}
+            {gameStatus === 'black-wins' && playerColor === 'b' && '🎉 You Win!'}
+            {gameStatus === 'black-wins' && playerColor === 'w' && '😞 Stockfish Wins!'}
             {gameStatus === 'draw' && '🤝 Draw!'}
           </div>
         )}
         
-        {isLoading && (
+        {isLoading && gameStarted && (
           <div className="text-base sm:text-lg">🤖 Stockfish is thinking...</div>
         )}
         
-        {!isLoading && thinkingTime !== null && thinkingTime > 0 && gameStatus === 'playing' && (
+        {!isLoading && thinkingTime !== null && thinkingTime > 0 && gameStatus === 'playing' && gameStarted && (
           <div className={`text-sm sm:text-base font-semibold ${thinkingTime < 1000 ? 'text-green-400' : 'text-yellow-400'}`}>
             ⚡ Thinking time: {thinkingTime.toFixed(0)}ms {thinkingTime < 1000 && '✓'}
           </div>

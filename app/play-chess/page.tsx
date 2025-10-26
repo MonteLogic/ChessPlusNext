@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { ChessBoard } from './ChessBoard';
 import { GameControls } from './GameControls';
@@ -13,7 +13,29 @@ export default function PlayChessPage() {
   const [gameStatus, setGameStatus] = useState('playing');
   const [isLoading, setIsLoading] = useState(false);
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
+  const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w');
+  const [gameStarted, setGameStarted] = useState(false); // Game starts when player makes first move
   const { isReady, isLoading: stockfishLoading, error: stockfishError, thinkingTime, getBestMove } = useStockfish();
+  
+  // Audio ref for chess piece move sound
+  const moveSoundRef = useRef<HTMLAudioElement | null>(null);
+  
+  const playMoveSound = useCallback(() => {
+    try {
+      if (!moveSoundRef.current) {
+        moveSoundRef.current = new Audio('/chess-sounds/placingChessPiece.wav');
+        moveSoundRef.current.volume = 0.5;
+      }
+      
+      // Reset to start and play
+      moveSoundRef.current.currentTime = 0;
+      moveSoundRef.current.play().catch(error => {
+        console.error('Failed to play move sound:', error);
+      });
+    } catch (error) {
+      console.error('Failed to play move sound:', error);
+    }
+  }, []);
 
   const updateBoard = useCallback(() => {
     setBoard(game.board());
@@ -31,15 +53,24 @@ export default function PlayChessPage() {
   }, [game]);
 
   const makeMove = useCallback(async (from: string, to: string) => {
-    if (gameStatus !== 'playing' || game.turn() !== 'w') return false;
+    // Only allow moves when it's the player's turn
+    if (gameStatus !== 'playing' || game.turn() !== playerColor) return false;
+    
+    // For Black, game must be started first (Stockfish must make first move)
+    if (playerColor === 'b' && !gameStarted) return false;
     
     try {
       const move = game.move({ from, to, promotion: 'q' });
       if (move) {
+        // Start the game when White player makes their first move
+        if (!gameStarted && playerColor === 'w') {
+          setGameStarted(true);
+        }
+        
         updateBoard();
         
-        // If game is still ongoing and it's black's turn, get Stockfish move
-        if (!game.isGameOver() && game.turn() === 'b' && isReady) {
+        // If game is still ongoing, get Stockfish move (opponent's turn)
+        if (!game.isGameOver() && isReady) {
           setIsLoading(true);
           try {
             const stockfishMove = await getBestMove(game);
@@ -47,6 +78,7 @@ export default function PlayChessPage() {
               const stockfishMoveObj = game.move(stockfishMove);
               if (stockfishMoveObj) {
                 updateBoard();
+                playMoveSound(); // Play sound when computer moves
               }
             }
           } catch (error) {
@@ -62,15 +94,49 @@ export default function PlayChessPage() {
       console.error('Invalid move:', error);
     }
     return false;
-  }, [game, gameStatus, updateBoard, isReady, getBestMove]);
+  }, [game, gameStatus, updateBoard, isReady, getBestMove, playerColor, gameStarted, playMoveSound]);
 
   const resetGame = useCallback(() => {
     const newGame = new Chess();
     setGame(newGame);
     setGameStatus('playing');
     setMoveHistory([]);
+    setGameStarted(false);
     updateBoard();
   }, [updateBoard]);
+
+  const handlePlayerColorChange = useCallback((color: 'w' | 'b') => {
+    setPlayerColor(color);
+    const newGame = new Chess();
+    setGame(newGame);
+    setGameStatus('playing');
+    setMoveHistory([]);
+    setGameStarted(false); // Game starts when player makes first move
+    updateBoard();
+  }, [updateBoard]);
+
+  const startGame = useCallback(async () => {
+    setGameStarted(true);
+    
+    // If playing as Black, Stockfish (White) should make the first move
+    if (playerColor === 'b' && isReady) {
+      setIsLoading(true);
+      try {
+        const stockfishMove = await getBestMove(game);
+        if (stockfishMove) {
+          const stockfishMoveObj = game.move(stockfishMove);
+          if (stockfishMoveObj) {
+            updateBoard();
+            playMoveSound(); // Play sound when computer makes first move
+          }
+        }
+      } catch (error) {
+        console.error('Stockfish move failed:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  }, [playerColor, isReady, game, getBestMove, updateBoard, playMoveSound]);
 
   const undoMove = useCallback(() => {
     if (moveHistory.length > 0) {
@@ -122,6 +188,8 @@ export default function PlayChessPage() {
               isLoading={isLoading || stockfishLoading}
               game={game}
               thinkingTime={thinkingTime}
+              playerColor={playerColor}
+              gameStarted={gameStarted}
             />
           </div>
         </div>
@@ -138,6 +206,10 @@ export default function PlayChessPage() {
               isStockfishReady={isReady}
               stockfishError={stockfishError}
               thinkingTime={thinkingTime}
+              playerColor={playerColor}
+              onPlayerColorChange={handlePlayerColorChange}
+              gameStarted={gameStarted}
+              onStartGame={startGame}
             />
           </div>
         </div>
