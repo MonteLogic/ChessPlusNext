@@ -42,7 +42,10 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkin
   }, [game]);
 
   const handleSquareClick = useCallback(async (row: number, col: number) => {
-    if (gameStatus !== 'playing' || isLoading || !gameStarted) return;
+    if (gameStatus !== 'playing' || isLoading) return;
+    
+    // For Black, game must be started first
+    if (playerColor === 'b' && !gameStarted) return;
     
     const squareId = getSquareId(row, col); // squareId is now type Square
     const piece = board[row][col];
@@ -102,12 +105,12 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkin
                     ${isSelected ? 'ring-4 ring-blue-400 ring-opacity-80' : ''}
                     ${isPossibleMove ? 'ring-2 ring-green-400 ring-opacity-60' : ''}
                     hover:brightness-110 transition-all duration-200
-                    ${!gameStarted ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+                    ${!gameStarted && playerColor === 'b' ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
                     ${isSelected ? 'shadow-inner' : ''}
                     border-0 outline-none
                   `}
                   onClick={() => handleSquareClick(actualRowIndex, actualColIndex)}
-                  disabled={isLoading || !gameStarted}
+                  disabled={isLoading || (!gameStarted && playerColor === 'b')}
                 >
                   {piece && (
                     <ChessPiece 

@@ -33,31 +33,33 @@ export function GameControls({
     <div className="space-y-4">
       <h3 className="text-lg sm:text-xl font-bold">Game Controls</h3>
       
-      <div className="grid grid-cols-2 gap-2 xl:grid-cols-1 xl:space-y-2 xl:gap-0">
-        <button
-          onClick={onReset}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 sm:px-4 rounded transition-colors text-sm sm:text-base"
-        >
-          New Game
-        </button>
-        
-        <button
-          onClick={onUndo}
-          disabled={moveHistory.length === 0 || isLoading}
-          className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-bold py-2 px-3 sm:px-4 rounded transition-colors text-sm sm:text-base"
-        >
-          Undo Move
-        </button>
-      </div>
-
-      {!gameStarted && onStartGame && (
-        <button
-          onClick={onStartGame}
-          disabled={isLoading || !isStockfishReady}
-          className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-500 disabled:cursor-not-allowed text-white font-bold py-2 px-3 sm:px-4 rounded transition-colors text-sm sm:text-base"
-        >
-          Start Game
-        </button>
+      {gameStarted ? (
+        <div className="grid grid-cols-2 gap-2 xl:grid-cols-1 xl:space-y-2 xl:gap-0">
+          <button
+            onClick={onReset}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 sm:px-4 rounded transition-colors text-sm sm:text-base"
+          >
+            New Game
+          </button>
+          
+          <button
+            onClick={onUndo}
+            disabled={moveHistory.length === 0 || isLoading}
+            className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-bold py-2 px-3 sm:px-4 rounded transition-colors text-sm sm:text-base"
+          >
+            Undo Move
+          </button>
+        </div>
+      ) : (
+        onStartGame && (
+          <button
+            onClick={onStartGame}
+            disabled={isLoading || !isStockfishReady}
+            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-500 disabled:cursor-not-allowed text-white font-bold py-2 px-3 sm:px-4 rounded transition-colors text-sm sm:text-base"
+          >
+            Start Game
+          </button>
+        )
       )}
 
       <div className="border-t border-gray-600 pt-4">

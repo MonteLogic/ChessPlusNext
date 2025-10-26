@@ -14,7 +14,7 @@ export default function PlayChessPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w');
-  const [gameStarted, setGameStarted] = useState(true); // White can start immediately
+  const [gameStarted, setGameStarted] = useState(false); // Game starts when player makes first move
   const { isReady, isLoading: stockfishLoading, error: stockfishError, thinkingTime, getBestMove } = useStockfish();
   
   // Audio ref for chess piece move sound
@@ -54,13 +54,19 @@ export default function PlayChessPage() {
 
   const makeMove = useCallback(async (from: string, to: string) => {
     // Only allow moves when it's the player's turn
-    // For Black player, also check that game has started (Stockfish has moved first)
     if (gameStatus !== 'playing' || game.turn() !== playerColor) return false;
+    
+    // For Black, game must be started first (Stockfish must make first move)
     if (playerColor === 'b' && !gameStarted) return false;
     
     try {
       const move = game.move({ from, to, promotion: 'q' });
       if (move) {
+        // Start the game when White player makes their first move
+        if (!gameStarted && playerColor === 'w') {
+          setGameStarted(true);
+        }
+        
         updateBoard();
         
         // If game is still ongoing, get Stockfish move (opponent's turn)
@@ -105,7 +111,7 @@ export default function PlayChessPage() {
     setGame(newGame);
     setGameStatus('playing');
     setMoveHistory([]);
-    setGameStarted(color === 'w'); // White can start immediately, Black needs to press Start Game
+    setGameStarted(false); // Game starts when player makes first move
     updateBoard();
   }, [updateBoard]);
 
