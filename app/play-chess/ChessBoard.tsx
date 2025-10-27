@@ -151,8 +151,8 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkin
   return (
     <div className="w-full flex flex-col items-center">
       {/* Responsive Chess Board */}
-      <div className="w-full max-w-md sm:max-w-lg lg:max-w-xl xl:max-w-2xl aspect-square">
-        <div className="grid grid-cols-8 border-4 border-stone-800 rounded-xl overflow-hidden shadow-2xl h-full">
+      <div className="w-full max-w-[calc(100vw-5rem)] sm:max-w-md lg:max-w-xl xl:max-w-2xl aspect-square">
+        <div className="grid grid-cols-8 border-2 sm:border-4 border-stone-800 rounded-xl overflow-hidden shadow-2xl h-full w-full">
           {(playerColor === 'b' ? [...board].reverse() : board).map((row, visualRowIndex) =>
             (playerColor === 'b' ? [...row].reverse() : row).map((piece, visualColIndex) => {
               // Map visual indices back to actual indices
@@ -192,12 +192,12 @@ export function ChessBoard({ board, onMove, gameStatus, isLoading, game, thinkin
                     <ChessPiece 
                       piece={`${piece.color}${piece.type.toUpperCase()}`} 
                       size={60}
-                      className="drop-shadow-md w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14"
+                      className="drop-shadow-md w-7 h-7 sm:w-9 sm:h-9 md:w-11 md:h-11 lg:w-14 lg:h-14 xl:w-16 xl:h-16"
                     />
                   )}
                   {isPossibleMove && !piece && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-400 rounded-full opacity-60"></div>
+                      <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3 bg-green-400 rounded-full opacity-60"></div>
                     </div>
                   )}
                 </button>
