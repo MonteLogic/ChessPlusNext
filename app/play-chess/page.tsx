@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Chess } from 'chess.js';
-import { ChessBoard } from './ChessBoard';
+import { Chessboard } from 'react-chessboard';
+
 import { GameControls } from './GameControls';
 import { useStockfish } from './useStockfish';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -181,16 +182,7 @@ export default function PlayChessPage() {
         {/* Chess Board Section */}
         <div className="flex-1 flex flex-col items-center justify-center p-4 xl:p-6">
           <div className="w-full max-w-2xl">
-            <ChessBoard 
-              board={board}
-              onMove={makeMove}
-              gameStatus={gameStatus}
-              isLoading={isLoading || stockfishLoading}
-              game={game}
-              thinkingTime={thinkingTime}
-              playerColor={playerColor}
-              gameStarted={gameStarted}
-            />
+            <Chessboard />
           </div>
         </div>
         
