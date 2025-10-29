@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Chess } from 'chess.js';
+import { useState, useCallback, useRef } from 'react';
 import { Chessboard } from 'react-chessboard';
 
 import { GameControls } from './GameControls';
@@ -9,8 +8,7 @@ import { useStockfish } from './useStockfish';
 import { LoadingSpinner } from './LoadingSpinner';
 
 export default function PlayChessPage() {
-  const [game, setGame] = useState(new Chess());
-  const [board, setBoard] = useState(game.board());
+  const [gamePosition, setGamePosition] = useState('start');
   const [gameStatus, setGameStatus] = useState('playing');
   const [isLoading, setIsLoading] = useState(false);
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
@@ -38,83 +36,109 @@ export default function PlayChessPage() {
     }
   }, []);
 
-  const updateBoard = useCallback(() => {
-    setBoard(game.board());
-    setMoveHistory(game.history());
-    
-    if (game.isGameOver()) {
-      if (game.isCheckmate()) {
-        setGameStatus(game.turn() === 'w' ? 'black-wins' : 'white-wins');
-      } else if (game.isDraw()) {
-        setGameStatus('draw');
-      }
-    } else {
-      setGameStatus('playing');
+  // Helper function to check if it's the player's turn
+  const isPlayerTurn = useCallback(() => {
+    // If game hasn't started or position is 'start', it's white's turn
+    if (gamePosition === 'start' || !gameStarted) {
+      return playerColor === 'w';
     }
-  }, [game]);
+    // In FEN notation, the active color is the 2nd field
+    // 'w' means white to move, 'b' means black to move
+    const activeColor = gamePosition.split(' ')[1];
+    return activeColor === playerColor;
+  }, [gamePosition, playerColor, gameStarted]);
 
-  const makeMove = useCallback(async (from: string, to: string) => {
+  const makeMove = useCallback(async (sourceSquare: string, targetSquare: string) => {
     // Only allow moves when it's the player's turn
-    if (gameStatus !== 'playing' || game.turn() !== playerColor) return false;
+    if (gameStatus !== 'playing' || !isPlayerTurn()) return false;
     
     // For Black, game must be started first (Stockfish must make first move)
     if (playerColor === 'b' && !gameStarted) return false;
     
     try {
-      const move = game.move({ from, to, promotion: 'q' });
-      if (move) {
-        // Start the game when White player makes their first move
-        if (!gameStarted && playerColor === 'w') {
-          setGameStarted(true);
+      // Validate and make the move using chess.js temporarily
+      const { Chess } = await import('chess.js');
+      const tempGame = new Chess(gamePosition === 'start' ? undefined : gamePosition);
+      const move = tempGame.move({ from: sourceSquare, to: targetSquare, promotion: 'q' });
+      
+      if (!move) {
+        return false; // Invalid move
+      }
+      
+      // Start the game when White player makes their first move
+      if (!gameStarted && playerColor === 'w') {
+        setGameStarted(true);
+      }
+      
+      // Update position and history
+      setGamePosition(tempGame.fen());
+      const moveNotation = `${sourceSquare}-${targetSquare}`;
+      setMoveHistory(prev => [...prev, moveNotation]);
+      
+      // Update game status
+      if (tempGame.isGameOver()) {
+        if (tempGame.isCheckmate()) {
+          setGameStatus(tempGame.turn() === 'w' ? 'black-wins' : 'white-wins');
+        } else if (tempGame.isDraw()) {
+          setGameStatus('draw');
         }
-        
-        updateBoard();
-        
-        // If game is still ongoing, get Stockfish move (opponent's turn)
-        if (!game.isGameOver() && isReady) {
-          setIsLoading(true);
-          try {
-            const stockfishMove = await getBestMove(game);
-            if (stockfishMove) {
-              const stockfishMoveObj = game.move(stockfishMove);
-              if (stockfishMoveObj) {
-                updateBoard();
-                playMoveSound(); // Play sound when computer moves
+      } else {
+        setGameStatus('playing');
+      }
+      
+      // If game is still ongoing, get Stockfish move (opponent's turn)
+      if (!tempGame.isGameOver() && isReady) {
+        setIsLoading(true);
+        try {
+          const stockfishMove = await getBestMove(tempGame.fen());
+          if (stockfishMove) {
+            // Apply Stockfish move to our position
+            const stockfishMoveObj = tempGame.move(stockfishMove);
+            if (stockfishMoveObj) {
+              setGamePosition(tempGame.fen());
+              setMoveHistory(prev => [...prev, stockfishMove]);
+              playMoveSound(); // Play sound when computer moves
+              
+              // Update game status after Stockfish move
+              if (tempGame.isGameOver()) {
+                if (tempGame.isCheckmate()) {
+                  setGameStatus(tempGame.turn() === 'w' ? 'black-wins' : 'white-wins');
+                } else if (tempGame.isDraw()) {
+                  setGameStatus('draw');
+                }
+              } else {
+                setGameStatus('playing');
               }
             }
-          } catch (error) {
-            console.error('Stockfish move failed:', error);
-          } finally {
-            setIsLoading(false);
           }
+        } catch (error) {
+          console.error('Stockfish move failed:', error);
+        } finally {
+          setIsLoading(false);
         }
-        
-        return true;
       }
+      
+      return true;
     } catch (error) {
       console.error('Invalid move:', error);
+      return false;
     }
-    return false;
-  }, [game, gameStatus, updateBoard, isReady, getBestMove, playerColor, gameStarted, playMoveSound]);
+  }, [gameStatus, isPlayerTurn, isReady, getBestMove, playerColor, gameStarted, playMoveSound, gamePosition]);
 
   const resetGame = useCallback(() => {
-    const newGame = new Chess();
-    setGame(newGame);
+    setGamePosition('start');
     setGameStatus('playing');
     setMoveHistory([]);
     setGameStarted(false);
-    updateBoard();
-  }, [updateBoard]);
+  }, []);
 
   const handlePlayerColorChange = useCallback((color: 'w' | 'b') => {
     setPlayerColor(color);
-    const newGame = new Chess();
-    setGame(newGame);
+    setGamePosition('start');
     setGameStatus('playing');
     setMoveHistory([]);
     setGameStarted(false); // Game starts when player makes first move
-    updateBoard();
-  }, [updateBoard]);
+  }, []);
 
   const startGame = useCallback(async () => {
     setGameStarted(true);
@@ -123,11 +147,17 @@ export default function PlayChessPage() {
     if (playerColor === 'b' && isReady) {
       setIsLoading(true);
       try {
-        const stockfishMove = await getBestMove(game);
+        // Create initial game position for Stockfish
+        const { Chess } = await import('chess.js');
+        const tempGame = new Chess();
+        const fen = tempGame.fen();
+        const stockfishMove = await getBestMove(fen);
         if (stockfishMove) {
-          const stockfishMoveObj = game.move(stockfishMove);
+          // Apply Stockfish move to our position
+          const stockfishMoveObj = tempGame.move(stockfishMove);
           if (stockfishMoveObj) {
-            updateBoard();
+            setGamePosition(tempGame.fen());
+            setMoveHistory([stockfishMove]);
             playMoveSound(); // Play sound when computer makes first move
           }
         }
@@ -137,18 +167,16 @@ export default function PlayChessPage() {
         setIsLoading(false);
       }
     }
-  }, [playerColor, isReady, game, getBestMove, updateBoard, playMoveSound]);
+  }, [playerColor, isReady, getBestMove, playMoveSound]);
 
   const undoMove = useCallback(() => {
     if (moveHistory.length > 0) {
-      game.undo();
-      updateBoard();
+      // Remove the last move from history
+      setMoveHistory(prev => prev.slice(0, -1));
+      // For now, we'll reset to start position - in a real implementation you'd track the position history
+      setGamePosition('start');
     }
-  }, [game, moveHistory.length, updateBoard]);
-
-  useEffect(() => {
-    updateBoard();
-  }, [updateBoard]);
+  }, [moveHistory.length]);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -182,7 +210,30 @@ export default function PlayChessPage() {
         {/* Chess Board Section */}
         <div className="flex-1 flex flex-col items-center justify-center p-4 xl:p-6">
           <div className="w-full max-w-2xl">
-            <Chessboard />
+            <Chessboard 
+              options={{
+                position: gamePosition === 'start' ? undefined : gamePosition,
+                onPieceDrop: ({ sourceSquare, targetSquare }) => {
+                  // Quick validation - check if it's the player's turn and game is active
+                  if (gameStatus !== 'playing' || !isPlayerTurn()) {
+                    return false;
+                  }
+                  if (playerColor === 'b' && !gameStarted) {
+                    return false;
+                  }
+                  // If targetSquare is null, it means the piece was dragged off the board - reject it
+                  if (!targetSquare) {
+                    return false;
+                  }
+                  // Trigger the move asynchronously - the position will update via state
+                  makeMove(sourceSquare, targetSquare).catch(console.error);
+                  // Return true to allow the visual drop, actual validation happens in makeMove
+                  return true;
+                },
+                boardOrientation: playerColor === 'w' ? 'white' : 'black',
+                allowDragging: gameStatus === 'playing' && isPlayerTurn(),
+              }}
+            />
           </div>
         </div>
         

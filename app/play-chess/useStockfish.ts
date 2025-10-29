@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Chess } from 'chess.js';
 import { StockfishEngine } from './StockfishEngine';
 
 interface StockfishHook {
@@ -10,7 +9,7 @@ interface StockfishHook {
   isLoading: boolean;
   error: string | null;
   thinkingTime: number | null;
-  getBestMove: (game: Chess) => Promise<string | null>;
+  getBestMove: (fen: string) => Promise<string | null>;
 }
 
 export function useStockfish(): StockfishHook {
@@ -96,7 +95,7 @@ export function useStockfish(): StockfishHook {
     };
   }, []); // Empty dependency array, runs once
 
-  const getBestMove = useCallback(async (game: Chess): Promise<string | null> => {
+  const getBestMove = useCallback(async (fen: string): Promise<string | null> => {
     if (!stockfish || !isReady) {
       console.error('Stockfish not ready');
       return null;
@@ -137,7 +136,6 @@ export function useStockfish(): StockfishHook {
       }, 1500); // 1.5 second timeout (reduced from 3s)
 
       // Send the position and command to Stockfish
-      const fen = game.fen();
       stockfish.postMessage(`position fen ${fen}`);
       stockfish.postMessage('go movetime 800'); // 800ms max - targeting sub-second response
     });
