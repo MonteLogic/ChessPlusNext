@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { Chessboard } from 'react-chessboard';
+import { type Square } from 'chess.js';
 
 import { GameControls } from './GameControls';
 import { useStockfish } from './useStockfish';
@@ -14,6 +15,7 @@ export default function PlayChessPage() {
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w');
   const [gameStarted, setGameStarted] = useState(false); // Game starts when player makes first move
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null); // For click-to-move
   const { isReady, isLoading: stockfishLoading, error: stockfishError, thinkingTime, getBestMove } = useStockfish();
   
   // Audio ref for chess piece move sound
@@ -130,6 +132,7 @@ export default function PlayChessPage() {
     setGameStatus('playing');
     setMoveHistory([]);
     setGameStarted(false);
+    setSelectedSquare(null);
   }, []);
 
   const handlePlayerColorChange = useCallback((color: 'w' | 'b') => {
@@ -138,6 +141,7 @@ export default function PlayChessPage() {
     setGameStatus('playing');
     setMoveHistory([]);
     setGameStarted(false); // Game starts when player makes first move
+    setSelectedSquare(null); // Clear selection when changing color
   }, []);
 
   const startGame = useCallback(async () => {
@@ -175,8 +179,83 @@ export default function PlayChessPage() {
       setMoveHistory(prev => prev.slice(0, -1));
       // For now, we'll reset to start position - in a real implementation you'd track the position history
       setGamePosition('start');
+      setSelectedSquare(null); // Clear selection when undoing
     }
   }, [moveHistory.length]);
+
+  // Helper to get piece at a square
+  const getPieceAtSquare = useCallback(async (square: string) => {
+    try {
+      const { Chess } = await import('chess.js');
+      const tempGame = new Chess(gamePosition === 'start' ? undefined : gamePosition);
+      return tempGame.get(square as Square);
+    } catch {
+      return null;
+    }
+  }, [gamePosition]);
+
+  // Helper to check if a move is valid
+  const isValidMove = useCallback(async (from: string, to: string) => {
+    try {
+      const { Chess } = await import('chess.js');
+      const tempGame = new Chess(gamePosition === 'start' ? undefined : gamePosition);
+      const move = tempGame.move({ from, to, promotion: 'q' });
+      return move !== null;
+    } catch {
+      return false;
+    }
+  }, [gamePosition]);
+
+  // Handle square click for click-to-move
+  const handleSquareClick = useCallback(async ({ square }: { square: string; piece?: any }) => {
+    // Only allow clicks when it's the player's turn
+    if (gameStatus !== 'playing' || !isPlayerTurn()) {
+      return;
+    }
+    
+    // For Black, game must be started first
+    if (playerColor === 'b' && !gameStarted) {
+      return;
+    }
+
+    const squarePiece = await getPieceAtSquare(square);
+
+    // If no piece is selected yet
+    if (!selectedSquare) {
+      // If clicked square has player's piece, select it
+      if (squarePiece && squarePiece.color === playerColor) {
+        setSelectedSquare(square);
+      }
+    } else {
+      // A piece is already selected
+      if (square === selectedSquare) {
+        // Clicking the same square deselects it
+        setSelectedSquare(null);
+      } else {
+        // Check if clicked square has player's piece (switch selection)
+        if (squarePiece && squarePiece.color === playerColor) {
+          setSelectedSquare(square);
+        } else {
+          // Try to make a move from selected square to clicked square
+          const valid = await isValidMove(selectedSquare, square);
+          if (valid) {
+            const moveSuccess = await makeMove(selectedSquare, square);
+            if (moveSuccess) {
+              setSelectedSquare(null); // Clear selection after successful move
+            }
+          } else {
+            // Invalid move - clear selection or try selecting the clicked square if it's player's piece
+            setSelectedSquare(null);
+          }
+        }
+      }
+    }
+  }, [selectedSquare, gameStatus, isPlayerTurn, playerColor, gameStarted, getPieceAtSquare, isValidMove, makeMove]);
+
+  // Clear selection when game state changes
+  const resetGameWithSelection = useCallback(() => {
+    resetGame();
+  }, [resetGame]);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -225,11 +304,21 @@ export default function PlayChessPage() {
                   if (!targetSquare) {
                     return false;
                   }
+                  // Clear any selected square when dragging
+                  setSelectedSquare(null);
                   // Trigger the move asynchronously - the position will update via state
                   makeMove(sourceSquare, targetSquare).catch(console.error);
                   // Return true to allow the visual drop, actual validation happens in makeMove
                   return true;
                 },
+                onSquareClick: handleSquareClick,
+                squareStyles: selectedSquare
+                  ? {
+                      [selectedSquare]: {
+                        backgroundColor: 'rgba(255, 255, 0, 0.4)',
+                      },
+                    }
+                  : {},
                 boardOrientation: playerColor === 'w' ? 'white' : 'black',
                 allowDragging: gameStatus === 'playing' && isPlayerTurn(),
               }}
@@ -243,7 +332,7 @@ export default function PlayChessPage() {
             <GameControls
               gameStatus={gameStatus}
               moveHistory={moveHistory}
-              onReset={resetGame}
+              onReset={resetGameWithSelection}
               onUndo={undoMove}
               isLoading={isLoading || stockfishLoading}
               isStockfishReady={isReady}
