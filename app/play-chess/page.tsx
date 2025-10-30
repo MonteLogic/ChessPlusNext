@@ -173,15 +173,58 @@ export default function PlayChessPage() {
     }
   }, [playerColor, isReady, getBestMove, playMoveSound]);
 
-  const undoMove = useCallback(() => {
+  const undoMove = useCallback(async () => {
     if (moveHistory.length > 0) {
       // Remove the last move from history
-      setMoveHistory(prev => prev.slice(0, -1));
-      // For now, we'll reset to start position - in a real implementation you'd track the position history
-      setGamePosition('start');
+      const newHistory = moveHistory.slice(0, -1);
+      setMoveHistory(newHistory);
+      
+      // Reconstruct the game position by replaying all remaining moves
+      try {
+        const { Chess } = await import('chess.js');
+        const tempGame = new Chess();
+        
+        // Replay all moves from the updated history
+        for (const moveNotation of newHistory) {
+          // Move notation can be either "from-to" format or standard chess notation
+          if (moveNotation.includes('-')) {
+            // Handle "from-to" format
+            const [from, to] = moveNotation.split('-');
+            tempGame.move({ from, to, promotion: 'q' });
+          } else {
+            // Handle standard chess notation (for Stockfish moves)
+            tempGame.move(moveNotation);
+          }
+        }
+        
+        // Update position to the reconstructed state
+        const newFen = tempGame.fen();
+        setGamePosition(newFen === 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1' ? 'start' : newFen);
+        
+        // Update game status
+        if (tempGame.isGameOver()) {
+          if (tempGame.isCheckmate()) {
+            setGameStatus(tempGame.turn() === 'w' ? 'black-wins' : 'white-wins');
+          } else if (tempGame.isDraw()) {
+            setGameStatus('draw');
+          }
+        } else {
+          setGameStatus('playing');
+        }
+        
+        // Update gameStarted flag - if no moves left and playing as black, game hasn't started
+        if (newHistory.length === 0 && playerColor === 'b') {
+          setGameStarted(false);
+        }
+      } catch (error) {
+        console.error('Error undoing move:', error);
+        // Fallback to start position if reconstruction fails
+        setGamePosition('start');
+      }
+      
       setSelectedSquare(null); // Clear selection when undoing
     }
-  }, [moveHistory.length]);
+  }, [moveHistory, playerColor]);
 
   // Helper to get piece at a square
   const getPieceAtSquare = useCallback(async (square: string) => {
