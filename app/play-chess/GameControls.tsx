@@ -31,8 +31,6 @@ export function GameControls({
 }: GameControlsProps) {
   return (
     <div className="space-y-4">
-      <h3 className="text-lg sm:text-xl font-bold">Game Controls</h3>
-      
       {gameStarted ? (
         <div className="grid grid-cols-2 gap-2 xl:grid-cols-1 xl:space-y-2 xl:gap-0">
           <button
@@ -149,16 +147,6 @@ export function GameControls({
           </div>
         </div>
       )}
-
-      <div className="border-t border-gray-600 pt-4">
-        <h4 className="text-base sm:text-lg font-semibold mb-2">Instructions</h4>
-        <div className="text-xs sm:text-sm text-gray-300 space-y-1">
-          <div>• Click or drag your piece to move</div>
-          <div>• Drop on highlighted squares</div>
-          <div>• You play as {playerColor === 'w' ? 'White' : 'Black'}</div>
-          <div>• Stockfish plays as {playerColor === 'w' ? 'Black' : 'White'}</div>
-        </div>
-      </div>
     </div>
   );
 }
