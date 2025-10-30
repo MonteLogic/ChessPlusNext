@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 interface GameControlsProps {
   gameStatus: string;
   moveHistory: string[];
@@ -15,6 +17,8 @@ interface GameControlsProps {
   onStartGame?: () => void;
 }
 
+type TabType = 'game' | 'stockfish' | 'history';
+
 export function GameControls({ 
   gameStatus, 
   moveHistory, 
@@ -29,6 +33,8 @@ export function GameControls({
   gameStarted = true,
   onStartGame
 }: GameControlsProps) {
+  const [activeTab, setActiveTab] = useState<TabType>('game');
+
   return (
     <div className="space-y-4">
       {gameStarted ? (
@@ -60,59 +66,131 @@ export function GameControls({
         )
       )}
 
-      <div className="border-t border-gray-600 pt-4">
-        <h4 className="text-base sm:text-lg font-semibold mb-2">Game Status</h4>
-        <div className="text-xs sm:text-sm space-y-1">
-          <div className={`${isStockfishReady ? 'text-green-400' : stockfishError ? 'text-red-400' : 'text-yellow-400'}`}>
-            ● Stockfish: {isStockfishReady ? 'Ready' : stockfishError ? 'Error' : 'Loading...'}
-          </div>
-          {stockfishError && (
-            <div className="text-red-400 text-xs">
-              {stockfishError}
+      {/* Tabbed Interface */}
+      <div className="border border-gray-600 rounded-lg bg-gray-900 overflow-hidden">
+        {/* Tab Navigation */}
+        <div className="flex border-b border-gray-700">
+          <button
+            onClick={() => setActiveTab('game')}
+            className={`flex-1 px-3 py-2 text-xs sm:text-sm font-medium transition-colors ${
+              activeTab === 'game'
+                ? 'bg-gray-800 text-white border-b-2 border-blue-500'
+                : 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
+            }`}
+          >
+            Game Status
+          </button>
+          <button
+            onClick={() => setActiveTab('stockfish')}
+            className={`flex-1 px-3 py-2 text-xs sm:text-sm font-medium transition-colors ${
+              activeTab === 'stockfish'
+                ? 'bg-gray-800 text-white border-b-2 border-blue-500'
+                : 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
+            }`}
+          >
+            Stockfish
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`flex-1 px-3 py-2 text-xs sm:text-sm font-medium transition-colors ${
+              activeTab === 'history'
+                ? 'bg-gray-800 text-white border-b-2 border-blue-500'
+                : 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
+            }`}
+          >
+            History
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        <div className="p-4 min-h-[130px] max-h-40 overflow-y-auto">
+          {/* Game Status Tab */}
+          {activeTab === 'game' && (
+            <div className="text-xs sm:text-sm space-y-2">
+              {gameStatus === 'playing' && (
+                <div className="text-green-400">● Game in progress</div>
+              )}
+              {gameStatus === 'white-wins' && playerColor === 'w' && (
+                <div className="text-yellow-400">● You won!</div>
+              )}
+              {gameStatus === 'white-wins' && playerColor === 'b' && (
+                <div className="text-red-400">● Stockfish won</div>
+              )}
+              {gameStatus === 'black-wins' && playerColor === 'b' && (
+                <div className="text-yellow-400">● You won!</div>
+              )}
+              {gameStatus === 'black-wins' && playerColor === 'w' && (
+                <div className="text-red-400">● Stockfish won</div>
+              )}
+              {gameStatus === 'draw' && (
+                <div className="text-gray-400">● Draw</div>
+              )}
             </div>
           )}
-          {thinkingTime !== null && thinkingTime > 0 && (
-            <div className={`${thinkingTime < 1000 ? 'text-green-400' : 'text-yellow-400'}`}>
-              ● Last move: {thinkingTime.toFixed(0)}ms {thinkingTime < 1000 && '✓'}
+
+          {/* Stockfish Status Tab */}
+          {activeTab === 'stockfish' && (
+            <div className="text-xs sm:text-sm space-y-2">
+              <div className={`${isStockfishReady ? 'text-green-400' : stockfishError ? 'text-red-400' : 'text-yellow-400'}`}>
+                ● Status: {isStockfishReady ? 'Ready' : stockfishError ? 'Error' : 'Loading...'}
+              </div>
+              {stockfishError && (
+                <div className="text-red-400 text-xs mt-2 p-2 bg-red-900/20 rounded border border-red-800">
+                  {stockfishError}
+                </div>
+              )}
+              {thinkingTime !== null && thinkingTime > 0 && (
+                <div className={`${thinkingTime < 1000 ? 'text-green-400' : 'text-yellow-400'}`}>
+                  ● Last move: {thinkingTime.toFixed(0)}ms {thinkingTime < 1000 && '✓'}
+                </div>
+              )}
             </div>
           )}
-          {gameStatus === 'playing' && (
-            <div className="text-green-400">● Game in progress</div>
-          )}
-          {gameStatus === 'white-wins' && playerColor === 'w' && (
-            <div className="text-yellow-400">● You won!</div>
-          )}
-          {gameStatus === 'white-wins' && playerColor === 'b' && (
-            <div className="text-red-400">● Stockfish won</div>
-          )}
-          {gameStatus === 'black-wins' && playerColor === 'b' && (
-            <div className="text-yellow-400">● You won!</div>
-          )}
-          {gameStatus === 'black-wins' && playerColor === 'w' && (
-            <div className="text-red-400">● Stockfish won</div>
-          )}
-          {gameStatus === 'draw' && (
-            <div className="text-gray-400">● Draw</div>
+
+          {/* Move History Tab */}
+          {activeTab === 'history' && (
+            <div>
+              {moveHistory.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs sm:text-sm">
+                    <thead className="bg-gray-800 sticky top-0">
+                      <tr>
+                        <th className="text-left px-3 py-2 text-gray-300 font-semibold border-b border-gray-700">#</th>
+                        <th className="text-left px-3 py-2 text-gray-300 font-semibold border-b border-gray-700">White</th>
+                        <th className="text-left px-3 py-2 text-gray-300 font-semibold border-b border-gray-700">Black</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.from({ length: Math.ceil(moveHistory.length / 2) }).map((_, rowIndex) => {
+                        const whiteMove = moveHistory[rowIndex * 2];
+                        const blackMove = moveHistory[rowIndex * 2 + 1];
+                        return (
+                          <tr 
+                            key={rowIndex} 
+                            className={rowIndex % 2 === 0 ? 'bg-gray-900' : 'bg-gray-800'}
+                          >
+                            <td className="px-3 py-1.5 text-gray-400 font-medium border-r border-gray-700">
+                              {rowIndex + 1}
+                            </td>
+                            <td className="px-3 py-1.5 text-white">
+                              {whiteMove || '-'}
+                            </td>
+                            <td className="px-3 py-1.5 text-white">
+                              {blackMove || '-'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-gray-400 text-center py-4">No moves yet</div>
+              )}
+            </div>
           )}
         </div>
       </div>
-
-      {moveHistory.length > 0 && (
-        <div className="border-t border-gray-600 pt-4">
-          <h4 className="text-base sm:text-lg font-semibold mb-2">Move History</h4>
-          <div className="max-h-32 sm:max-h-40 overflow-y-auto text-xs sm:text-sm space-y-1">
-            {moveHistory.map((move, index) => (
-              <div key={index} className="flex justify-between">
-                <span className="text-gray-300">
-                  {Math.floor(index / 2) + 1}.
-                  {index % 2 === 0 ? '' : '..'}
-                </span>
-                <span className="text-white">{move}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {onPlayerColorChange && (
         <div className="border-t border-gray-600 pt-4">

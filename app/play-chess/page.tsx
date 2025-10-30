@@ -258,9 +258,9 @@ export default function PlayChessPage() {
   }, [resetGame]);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="fixed inset-0 lg:left-64 xl:left-72 top-0 bg-gray-900 text-white overflow-auto">
       {/* Header Section */}
-      <div className="bg-gray-800 border-b border-gray-700 px-4 py-3">
+      <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 sticky top-0 z-10">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-center">Play Chess vs Stockfish</h1>
       </div>
 
@@ -285,9 +285,9 @@ export default function PlayChessPage() {
       )}
 
       {/* Main Game Area */}
-      <div className="flex flex-col xl:flex-row">
+      <div className="flex flex-col xl:flex-row min-h-[calc(100vh-73px)]">
         {/* Chess Board Section */}
-        <div className="flex-1 flex flex-col items-center justify-start p-4 xl:p-6">
+        <div className="flex-1 flex flex-col items-center justify-center p-4 xl:p-6">
           <div className="w-full max-w-2xl">
             <Chessboard 
               options={{
