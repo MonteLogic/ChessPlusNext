@@ -285,9 +285,9 @@ export default function PlayChessPage() {
       )}
 
       {/* Main Game Area */}
-      <div className="flex flex-col xl:flex-row min-h-[calc(100vh-80px)]">
+      <div className="flex flex-col xl:flex-row">
         {/* Chess Board Section */}
-        <div className="flex-1 flex flex-col items-center justify-center p-4 xl:p-6">
+        <div className="flex-1 flex flex-col items-center justify-start p-4 xl:p-6">
           <div className="w-full max-w-2xl">
             <Chessboard 
               options={{
