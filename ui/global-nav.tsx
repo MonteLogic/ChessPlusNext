@@ -28,7 +28,7 @@ export function GlobalNav({ userData }: { userData?: UserData }): JSX.Element {
             <CBudLogo />
           </div>
           <h3 className="font-semibold tracking-wide text-gray-400 group-hover:text-gray-50">
-            Contractor Bud
+            ChessMex
           </h3>
         </Link>
       </div>
